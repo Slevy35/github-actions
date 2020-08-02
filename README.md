@@ -1,3 +1,5 @@
-# github-api
+# GitHub Actions Examples
 
-Query github API with github actions
+- [x] Query github API
+- [ ] Upade EKS deployment
+- [ ] Push Docker image to ECR
