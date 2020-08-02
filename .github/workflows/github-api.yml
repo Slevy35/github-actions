@@ -1,4 +1,4 @@
-name: Github API
+name: Rollback to previous release
 
 on:
   release:
@@ -6,8 +6,13 @@ on:
       - prereleased
 
 jobs:
+
+  # Get latest release from Github API and update stable tag in ECR
   api:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        aws-region: [us-east-1]
 
     steps:
     - uses: actions/checkout@v2
@@ -23,3 +28,24 @@ jobs:
     - name: Print latest release version
       run: |
         echo "The latest release is: $RELEASE_TAG"
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ matrix.aws-region }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      
+      - name: Push to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: node-app
+          # RELEASE_TAG: ${GITHUB_REF##*/}
+        run: |
+          docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:stable
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:stable
