@@ -1,0 +1,63 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata: 
+  name: node-app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: node-app
+  name: node-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: node-app
+  template:
+    metadata:
+      labels:
+        app: node-app
+    spec:
+      containers:
+      - image: slevy35/node-app:stable
+        imagePullPolicy: Always
+        name: node-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-app
+  namespace: node-app
+spec:
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+  selector:
+    name: node-app
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: node-app
+  name: deployment-updater
+rules:
+- apiGroups: ["extensions", "apps"]
+  resources: ["deployments"]
+  resourceNames: ["node-app"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: deployment-updater-binding
+  namespace: node-app
+subjects:
+- kind: Group
+  name: deployment-updater
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: deployment-updater
+  apiGroup: rbac.authorization.k8s.io
