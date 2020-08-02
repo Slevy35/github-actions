@@ -36,16 +36,16 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ matrix.aws-region }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-      
-      - name: Push to ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: node-app
-          # RELEASE_TAG: ${GITHUB_REF##*/}
-        run: |
-          docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_TAG
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:stable
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:stable
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Push to ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: node-app
+        # RELEASE_TAG: ${GITHUB_REF##*/}
+      run: |
+        docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_TAG
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$RELEASE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:stable
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:stable
