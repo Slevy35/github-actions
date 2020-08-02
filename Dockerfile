@@ -4,7 +4,7 @@ FROM node:12
 WORKDIR /usr/src/app
 
 # Copy files
-COPY ./app-src/ ./
+COPY ./app/ ./
 
 # Install app dependencies
 RUN npm install
