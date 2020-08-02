@@ -6,7 +6,7 @@ on:
       - prereleased
 
 jobs:
-  curl:
+  api:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,4 +21,5 @@ jobs:
        echo ::set-env name=RELEASE_TAG::$(echo "${release//\"}")
 
     - name: Print latest release version
-      run: echo 'The latest release is - $RELEASE_TAG'
+      run: |
+        echo "The latest release is: $RELEASE_TAG"
