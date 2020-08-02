@@ -12,7 +12,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     
-    # Runs a set of commands using the runners shell
     - name: Query the latest release using API
       run: |
        release=$(curl -s \
@@ -21,6 +20,5 @@ jobs:
           --header 'content-type: application/json' | jq ".tag_name")
        echo ::set-env name=RELEASE_TAG::$(echo "${release//\"}")
 
-    # Runs a single command using the runners shell
-    - name: Print lates release version
+    - name: Print latest release version
       run: echo 'The latest release is - $RELEASE_TAG'
