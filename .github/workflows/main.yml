@@ -27,7 +27,7 @@ jobs:
       
       - name: Update COMMIT_TAG and RELEASE_TAG
         run: |
-          echo "::set-env name=COMMIT_TAG::$(git rev-parse --short HEAD)"
+          echo "COMMIT_TAG=${git rev-parse --short HEAD}" >> $GITHUB_ENV
           
       # Runs a single command using the runners shell
       - name: Run a one-line script
