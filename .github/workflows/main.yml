@@ -25,13 +25,14 @@ jobs:
       
       - name: Update COMMIT_TAG and RELEASE_TAG
         run: |
-          echo "COMMIT_TAG=${git rev-parse --short HEAD}" >> $GITHUB_ENV
+          echo "COMMIT_TAG=`echo git rev-parse --short HEAD" >> $GITHUB_ENV
           
       # Runs a single command using the runners shell
       - name: Run a one-line script
         run: echo the commit id is $COMMIT_TAG
 
   build2:
+    needs: build
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
