@@ -11,6 +11,8 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  COMMIT_TAG: 123
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -25,7 +27,7 @@ jobs:
       
       - name: Update COMMIT_TAG and RELEASE_TAG
         run: |
-          echo "COMMIT_TAG=`echo git rev-parse --short HEAD" >> $GITHUB_ENV
+          echo "COMMIT_TAG=`echo git rev-parse --short HEAD`" >> $GITHUB_ENV
           
       # Runs a single command using the runners shell
       - name: Run a one-line script
