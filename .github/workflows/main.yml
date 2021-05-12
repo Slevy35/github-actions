@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  COMMIT_TAG: 123
+  COMMIT_TAG: ${{ secrets.COMMIT_TAG }}
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
