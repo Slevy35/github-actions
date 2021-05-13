@@ -1,0 +1,106 @@
+name: Rollback
+
+on:
+  release:
+    types:
+      - unpublished
+
+env:
+  DOCKER_REGISTRY: docker.pkg.github.com
+
+jobs:
+
+  # Tag the latest release from Github API
+  Tag:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Query the latest release using API
+      run: |
+       release=$(curl -s \
+          --url https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest \
+          --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+          --header 'content-type: application/json' | jq ".tag_name")
+       echo ::set-env name=RELEASE_TAG::$(echo "${release//\"}")
+
+    - name: Login to GitHub Packages Docker Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Push to the docker registry
+      env:
+        ECR_REGISTRY: ${{ secrets.DOCKERHUB_USERNAME }}
+        ECR_REPOSITORY: node-app
+        # RELEASE_TAG: ${GITHUB_REF##*/}
+      run: |
+        docker pull $DOCKER_REGISTRY/$GITHUB_REPOSITORY/$IMAGE_NAME:$RELEASE_TAG
+        docker tag $DOCKER_REGISTRY/$GITHUB_REPOSITORY/$IMAGE_NAME:$RELEASE_TAG $DOCKER_REGISTRY/$GITHUB_REPOSITORY/$IMAGE_NAME:stable
+        docker push $DOCKER_REGISTRY/$GITHUB_REPOSITORY/$IMAGE_NAME:stable
+
+  # Update container image of deployment
+  Deploy:
+    needs: Tag
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+
+    steps:
+
+      - name: Checkout to branch
+        uses: actions/checkout@v2
+
+      - name: Query the latest release using API
+        run: |
+          release=$(curl -s \
+            --url https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest \
+            --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+            --header 'content-type: application/json' | jq ".tag_name")
+          echo ::set-env name=RELEASE_TAG::$(echo "${release//\"}")
+      
+      - name: Install CLIs
+        run:  |
+          sudo apt-get update
+          sudo apt-get install -y awscli kubectl
+          
+      - name: Update kubeconfig
+        env:
+          CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          ROLE_NAME: GithubActionsAssumeRole
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          PROFILE_NAME: eks
+        run:  |
+          # aws credentials for mgmt account
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+
+          # role to assume in the stage/prod account
+          aws configure set \
+            role_arn arn:aws:iam::$AWS_ACCOUNT_ID:role/$ROLE_NAME \
+            --profile $PROFILE_NAME
+          aws configure set source_profile default --profile $PROFILE_NAME
+
+          # Update kubeconfig file
+          aws eks update-kubeconfig \
+            --region $AWS_REGION \
+            --name $CLUSTER_NAME \
+            --profile $PROFILE_NAME
+
+      - name: Update deployment image version
+        env:
+          DEPLOYMENT_NAME: app-web
+          IMAGE_NAME: web
+          NAMESPACE: node-app
+          CONTAINER_NAME: web
+        run:  |
+          kubectl set image \
+            deployment/$DEPLOYMENT_NAME \
+            --namespace=$NAMESPACE \
+            $CONTAINER_NAME=$DOCKER_REGISTRY/$GITHUB_REPOSITORY/$IMAGE_NAME:$RELEASE_TAG \
+            --record
